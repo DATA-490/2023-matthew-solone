@@ -38,13 +38,15 @@ This project aims to streamline the soil sample intake process for the Center of
 ## Enhancements: 
 <List at least 2>
 
-- [ ] <thing 1>
-- [ ] <thing 2>
+- [ ] Consider using GitHub Pages to produce a website for CRARS
+- [ ] Reformat the QMD to produce a more visually appealing report 
+- [ ] Consider looking into more time series graphs for sample tracking
 
 # Can someone else work on this project? 
-<Yes/No>
+Yes!
 
 # Public Display/dissemination
-<List any existing public facing pages here>
+
+* Project was presented at the Spring 2023 Chico State College of Natural Sciences poster session. 
 
 # License
