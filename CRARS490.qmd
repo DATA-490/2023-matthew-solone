@@ -1,0 +1,190 @@
+---
+title: "CRARS and RAD Lab Soil Intake Progress Report"
+format: 
+  html:
+    theme: pulse
+    toc: true
+    toc-location: right
+editor: visual
+execute: 
+  warning: false
+  message: false
+  echo: false
+---
+```{r, echo = FALSE}
+# Load necessary packages
+library(tidyverse)
+library(knitr)
+library(lubridate)
+library(googlesheets4)
+library(googledrive)
+library(ggpubr)
+
+# Load example Barcode Sheet
+sample_data <- read_sheet('https://docs.google.com/spreadsheets/d/1PCCSZJhs9f4raQyxGGcWhFUCayHHUjMhjVCcoVDrWaI/edit#gid=718808986')
+
+#sample_duration <- sample_data %>% 
+  #group_by(Barcode) %>% summarize(duration = difftime(max(Timestamp) - min(Timestamp)))
+
+sample_data$Timestamp <- lubridate::ymd_hms(sample_data$Timestamp, tz = "UTC")
+
+sample_data$`Sample Status` <- fct_relevel(sample_data$`Sample Status`, c("Recieved", "Sieved & Grinded", "Vialed", "Pre- transport Check"))
+
+
+sample_wide <- sample_data %>% pivot_wider(names_from = In_out, values_from = Timestamp)
+
+grouped_data1 <- sample_wide %>%
+  mutate(Time = as.numeric(difftime(Out, In, units = "hours")))
+
+# Group Samples by most recent entry 
+grouped_data <- sample_data %>%
+  group_by(Barcode) %>%
+  slice_tail(n = 1) %>%
+  ungroup()
+
+# Group data into the 4 categories 
+recieved <- grouped_data %>%
+  filter(`Sample Status`  == "Recieved") %>%
+  select(Barcode, Employee, Timestamp)
+
+SandG <- grouped_data %>%
+  filter(`Sample Status`  == "Sieved & Grinded") %>%
+  select(Barcode, Employee, Timestamp)
+
+vialed <- grouped_data %>%
+  filter(`Sample Status`  == "Vialed") %>%
+  select(Barcode, Employee, Timestamp)
+
+preT <- grouped_data %>%
+  filter(`Sample Status`  == "Pre- transport Check") %>%
+  select(Barcode, Employee, Timestamp)
+```
+
+# Purpose of this Report
+
+The purpose of this report is to provide the `Center of Regenaterive Agriculture and Resiliant Systems` ( CRARS ) and the `Regenerative Agriculture Demonstration Lab` ( RAD Lab ) with a comprehensive report of the status of newly received soil samples and where they are in the process of intake processing before being sent for analysis. 
+
+
+# Workflow of Tracker
+
+```{mermaid}
+flowchart LR
+  A[Google Form] --> B[Google Sheet]
+  B --> C{Quarto Document}
+  C --> D[HTML Report]
+```
+
+::: {.border}
+
+# Current Progress  
+
+## Samples Processed to date
+
+* This section of the report intends to display tables of where each sample is in the "Intake Process" ( i.e. `Received`, `Sieved & Grinded`, `Vialed`, `Pre-transport check`).
+
+```{r, echo = FALSE}
+kable(recieved, caption = "Recieved", align = "c", booktabs = TRUE)
+
+```
+
+```{r, echo = FALSE}
+kable(SandG, caption = "Sieved & Grinded", align = "c", booktabs = TRUE)
+
+```
+
+```{r, echo = FALSE}
+kable(vialed, caption = "Vialed", align = "c", booktabs = TRUE)
+
+```
+
+```{r}
+kable(preT, caption = "Pre-Transport Check", align = "c", booktabs = TRUE)
+```
+
+## Distribution of Samples Across Stages
+
+* This section will show the distribution of samples in each of the intake processes. 
+
+```{r}
+status_table <- grouped_data %>%
+  group_by(`Sample Status`) %>%
+  summarize(count = n())
+
+# factor(status_table$`Sample Status`, levels = c("Received", "Sieved & Grinded", "Vialed", "Pre-transport check"), ordered = TRUE)
+
+ggplot(status_table, aes(x = `Sample Status`, y = count, fill = `Sample Status`)) +
+  geom_bar(stat = "identity") +
+  xlab("Sample status") +
+  ylab("Number of samples") +
+  ggtitle("Sample status distribution") +
+  theme_classic() +
+  scale_fill_brewer(palette = "YlOrRd")
+```
+
+## Location of Active Samples
+
+* This scatter plot shows the active samples in the intake process, where they are in the process, and also provides a date that they were entered.
+
+```{r}
+# Scatterplot of Active Samples
+grouped_data$Timestamp <- as.Date(grouped_data$Timestamp)
+
+ggplot(data = grouped_data, aes(x = Timestamp, y = Barcode, color = `Sample Status`)) +
+  geom_point() +
+  scale_color_discrete(name = "Sample Status") +
+  labs(x = "Time", y = "Sample", title = "Samples In Progress") +
+  theme_classic() +
+  scale_x_date(date_labels="%b %d", breaks = unique(grouped_data$Timestamp)) +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) 
+  
+
+```
+
+## Progress of Samples
+
+* This section simply shows the reader a progress linebar where as a sample goes through the intake the line will progress from left to right. 
+
+```{r}
+
+grouped_data1$`Sample Status` <- fct_relevel(grouped_data1$`Sample Status`, c("Recieved", "Sieved & Grinded", "Vialed", "Pre- transport Check"))
+
+ggplot(data = grouped_data1, aes(x = `Sample Status`, y = Barcode, group = Barcode, color = `Sample Status`)) +
+  geom_point() + 
+  geom_line()+
+  theme(legend.position = "none")
+
+```
+:::
+
+# Time Between Intake Processes
+
+## Progress bar with time intervals
+
+* This graph shows the progress of the samples through the intake system as well as the time each sample took in each process.
+```{r}
+grouped_data1$`Sample Status` <- fct_relevel(grouped_data1$`Sample Status`, c("Pre- transport Check", "Vialed", "Sieved & Grinded", "Recieved"))
+# Create the progress plot
+ggplot(data = grouped_data1, aes(x = Time, y = Barcode, fill = `Sample Status`)) +
+  geom_col()+
+  scale_fill_brewer(palette = "YlOrRd")
+```
+
+
+## Box plot of time between sample input
+
+In this visual we show a box plot of the time distribution between process for everysample. Although we cannot see specific samples we can see where they lie within the distribution. 
+
+```{r}
+grouped_data1$`Sample Status` <- fct_relevel(grouped_data1$`Sample Status`, c("Recieved", "Sieved & Grinded", "Vialed", "Pre- transport Check"))
+
+
+ggboxplot(grouped_data1, "Sample Status", "Time",
+    color = "Sample Status", palette = get_palette("YlOrRd",4),
+    add = "jitter", shape = "Sample Status")
+```
+
+
+
+
+
+
