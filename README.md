@@ -32,8 +32,7 @@ This project aims to streamline the soil sample intake process for the Center of
 
 <as applicable> Pending steps include: 
 
-- [ ] <thing 1>
-- [ ] <thing 2>
+- [ ] Further development of the QMD file to fit the needs of the center
 
 ## Enhancements: 
 <List at least 2>
@@ -48,5 +47,8 @@ Yes!
 # Public Display/dissemination
 
 * Project was presented at the Spring 2023 Chico State College of Natural Sciences poster session. 
+    
+[490Poster.pdf](https://github.com/DATA-490/2023-matthew-solone/files/11479973/490Poster.pdf)
+
 
 # License
